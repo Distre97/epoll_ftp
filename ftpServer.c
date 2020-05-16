@@ -55,7 +55,7 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 		else if(events[iter].events & EPOLLIN)
 		{
 			readCommand(epfd, socketfd, buffer);
-			
+			deleteBlack(buffer);	
 			//cut command
 			
 			//
@@ -66,28 +66,157 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 				readHelpFile(socketfd);
 			else if(strncmp(buffer, "get", 3) == 0)
 			{	
-				isFinished = getFile(socketfd, buffer+4);
+				isFinished = getFile(socketfd, buffer+3);
 				if(isFinished == 1)
 					send(socketfd, "succussful downloading!", MAXSIZE, 0);
 			}
 			else if(strncmp(buffer, "put", 3) == 0)
 			{	
-				isFinished = putFile(socketfd, buffer+4);
+				isFinished = putFile(socketfd, buffer+3);
 				if(isFinished == 1)
 					send(socketfd, "succussful uploading!", MAXSIZE, 0);
 			}
 			else
 				printf("No such command! Try \"help\" ! \n");	
 		}
-		
-		
+		else if(events[iter].events & EPOLLRDHUP)
+		{
+			close(socketfd);
+			epoll_ctl(epfd, EPOLL_CTL_DEL, socketfd, NULL);
+			printf("%d client break link\n",socketfd);
+		}
 
 
 	}
 }
 
+void readCommand(int epfd, int socketfd, char* buffer)
+{
+	while(1)
+	{
+		int num = recv(socketfd, buffer, MAXSIZE, 0);
+		if(num <= 0)
+		{
+			if((errno == EAGAIN) || (errno == EWOULDBLOCK))
+				break;
+			else
+				printf("read error!\n");
+			close(socketfd);
+			epoll_ctl(epfd, EPOLL_CTL_DEL, socketfd, NULL);
+		}
+	}
+	send(socketfd, "recived!", 8, 0);
+}
+
+void listFiles(int socketfd)
+{
+	DIR* mydir = NULL;
+	struct dirent* myitem = NULL;
+	char filenames[MAXSIZE];
+	bzero(filename, MAXSIZE);
+	mydir = opendir(".")
+	if(mydir == NULL)
+	{
+		send(socketfd, "open dir error!", MAXSIZE, 0);
+	}
+	else
+	{
+		while((myitem = readdir(mydir)) != NULL)
+		{
+			if(sprintf(filenames, myitem->d_name, MAXSIZE) < 0)
+			{
+				send(socketfd, "write buffer error!", MAXSIZE, 0);
+				break;
+			}
+			if(send(sockfd, filenames, MAXSIZE, 0) < 0)
+			{
+				printf("send error!\n");
+				break;
+			}
+		}	
+	}
+	closedir(mydir);
+	close(socketfd);
+}
+
+void readHelpFile(int socketfd)
+{
+	printf("help!\n");
+}
+
+void getFile(int socketfd, char* filename)
+{
+	int file, bufsz;
+	char buffer[MAXSIZE];
+	bzero(buffer,MAXSIZE);
+	file = open(filename, O_RDONLY);
+	if(file < 0)
+	{
+		send(socketfd,"get file error!", MAXSIZE, 0);
+		return;
+	}
+	
+	while((bufsz=read(file, buffer, MAXSIZE)) > 0)
+	{
+		if(send(socketfd, buffer, bufsz, 0) < 0)
+		{
+			printf("send file %s error\n", filename);
+			close(file);
+			break;
+		}
+	}
+	close(file);
+	close(socketfd);
+	return;
+
+}
+
+void putFile(int socketfd, char* filename)
+{
+	int file, bufsz;
+	char buffer[MAXSIZE];
+	bzero(buffer, MAXSIZE);
+
+	file = open(filename, O_WRONLY|O_CREATE|O_TRUNC, 0644);
+	if(file < 0)
+	{
+		send(socketfd, "put file error!", MAXSIZE, 0);
+		return;
+	}
+
+	while((bufsz=recv(socketfd, buffer, MAXSIZE, 0)) > 0)
+	{
+		if(write(file, buffer, bufsz) < 0)
+		{
+			printf("recive file %s error\n", filename);
+			close(file);
+			return;
+		}
+	}
+
+	close(file);
+	close(socketfd);
+	return;
+}
 
 
+
+
+
+void deleteBlack(char* buffer)
+{
+	int iter,space;
+	space = 0;
+	for(iter = 0; buffer[iter] != '\0'; iter++)
+	{
+		if(buffer[iter] != ' ')
+		{
+			buffer[space] = buffer[iter];
+			space++;
+		}
+	}
+	buffer[space] = '\0';
+}
 
 
 

@@ -31,7 +31,7 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 //
 
 //function for transport
-void readCommand(int epfd, int socketfd, char* buffe);
+void readCommand(int epfd, int socketfd, char* buffer);
 void listFiles(int socketfd);
 void readHelpFile(int socketfd);
 int getFile(int socketfd, char* filename);
@@ -39,7 +39,7 @@ int putFile(int socketfd, char* filename);
 void cmdHistory(int socketfd, char)
 //
 //extra things
-
+void deleteBlack(char* buffer);
 
 
 
