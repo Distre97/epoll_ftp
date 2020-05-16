@@ -1,16 +1,19 @@
 #ifndef MAIN_C
 #define MAIN_C
 
-#include 'ftpServer.h'
+#include "ftpServer.h"
+#include "GLOBAL.h"
 
-int main(){
+int main()
+{
 	int socketfd,epfd,eventnum;
 	char buffer[MAXSIZE];
 	memset(buffer,0,MAXSIZE);
 	socketfd = socketBind(IPADDRESS, PORT);
 	listen(socketfd, LISQUEUE);
-	struct epoll_event sipev, events[EPOLLEVENTSIZE];
-	epfd = epoll_creat(FDMAXSIZE);
+	struct epoll_event sipev;
+	struct epoll_event events[EPOLLEVENTSIZE];
+	epfd = epoll_create(FDMAXSIZE);
 	
 	//add event
 	sipev.events = EPOLLIN;

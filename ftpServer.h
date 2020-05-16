@@ -14,10 +14,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
-#include <netinet/in,h>
+#include <netinet/in.h>
 #include <signal.h>
 
-#include 'GLOBAL.h'
+#include "GLOBAL.h"
 
 //for saving commands
 struct cmdqueue{
@@ -36,7 +36,7 @@ void listFiles(int socketfd);
 void readHelpFile(int socketfd);
 int getFile(int socketfd, char* filename);
 int putFile(int socketfd, char* filename);
-void cmdHistory(int socketfd, char)
+void cmdHistory(int socketfd, struct cmdQ* histy);
 //
 //extra things
 void deleteBlack(char* buffer);

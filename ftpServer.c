@@ -1,5 +1,5 @@
-#include 'ftpServer.h'
-
+#include "ftpServer.h"
+#include "GLOBAL.h"
 int socketBind(char *ipaddr, int port)
 {
 	int socketfd,status;
@@ -7,7 +7,7 @@ int socketBind(char *ipaddr, int port)
 	socketfd = socket(AF_INET, SOCK_STREAM, 0);
 	assert(socketfd != -1);
 	
-	memset(&serv, 0 sizeof(serv));
+	memset(&serv, 0, sizeof(serv));
 
 	//set serv's parameters
 	serv.sin_family = AF_INET;
@@ -15,7 +15,7 @@ int socketBind(char *ipaddr, int port)
 	serv.sin_port = htons(port);
 	//
 	
-	status = bind(socketfd, (struct sockaddr *)&serv. sizeof(serv));
+	status = bind(socketfd, (struct sockaddr *)&serv, sizeof(serv));
 	assert(status != -1);
 
 	return socketfd;
@@ -42,14 +42,14 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 
 			//set nonblock
 			oldsta = fcntl(flag, F_GETFL);
-			newsta = oldsta | O_NONBOLCK;
+			newsta = oldsta | O_NONBLOCK;
 			fcntl(flag, F_SETFL, newsta);
 			//
 
 			//set et mod
 			sipev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 			sipev.data.fd = flag;
-			epoll_ctl(epollfd, EPOLL_CTL_ADD, flag, &sipev);
+			epoll_ctl(epfd, EPOLL_CTL_ADD, flag, &sipev);
 
 		}
 		else if(events[iter].events & EPOLLIN)
@@ -113,8 +113,8 @@ void listFiles(int socketfd)
 	DIR* mydir = NULL;
 	struct dirent* myitem = NULL;
 	char filenames[MAXSIZE];
-	bzero(filename, MAXSIZE);
-	mydir = opendir(".")
+	bzero(filenames, MAXSIZE);
+	mydir = opendir(".");
 	if(mydir == NULL)
 	{
 		send(socketfd, "open dir error!", MAXSIZE, 0);
@@ -128,7 +128,7 @@ void listFiles(int socketfd)
 				send(socketfd, "write buffer error!", MAXSIZE, 0);
 				break;
 			}
-			if(send(sockfd, filenames, MAXSIZE, 0) < 0)
+			if(send(socketfd, filenames, MAXSIZE, 0) < 0)
 			{
 				printf("send error!\n");
 				break;
@@ -144,7 +144,7 @@ void readHelpFile(int socketfd)
 	printf("help!\n");
 }
 
-void getFile(int socketfd, char* filename)
+int getFile(int socketfd, char* filename)
 {
 	int file, bufsz;
 	char buffer[MAXSIZE];
@@ -153,7 +153,7 @@ void getFile(int socketfd, char* filename)
 	if(file < 0)
 	{
 		send(socketfd,"get file error!", MAXSIZE, 0);
-		return;
+		return 0;
 	}
 	
 	while((bufsz=read(file, buffer, MAXSIZE)) > 0)
@@ -162,26 +162,26 @@ void getFile(int socketfd, char* filename)
 		{
 			printf("send file %s error\n", filename);
 			close(file);
-			break;
+			return 0;
 		}
 	}
 	close(file);
 	close(socketfd);
-	return;
+	return 1;
 
 }
 
-void putFile(int socketfd, char* filename)
+int putFile(int socketfd, char* filename)
 {
 	int file, bufsz;
 	char buffer[MAXSIZE];
 	bzero(buffer, MAXSIZE);
 
-	file = open(filename, O_WRONLY|O_CREATE|O_TRUNC, 0644);
+	file = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
 	if(file < 0)
 	{
 		send(socketfd, "put file error!", MAXSIZE, 0);
-		return;
+		return 0;
 	}
 
 	while((bufsz=recv(socketfd, buffer, MAXSIZE, 0)) > 0)
@@ -190,13 +190,13 @@ void putFile(int socketfd, char* filename)
 		{
 			printf("recive file %s error\n", filename);
 			close(file);
-			return;
+			return 0;
 		}
 	}
 
 	close(file);
 	close(socketfd);
-	return;
+	return 1;
 }
 
 
