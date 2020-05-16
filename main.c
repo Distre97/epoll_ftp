@@ -29,7 +29,6 @@ int main()
 			printf("Epoll error:");
 			continue;
 		}
-		printf("epoll waiting...\n");
 		etModDealEvents(socketfd, epfd, eventnum, buffer, events, sipev);
 
 	}

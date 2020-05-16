@@ -5,4 +5,4 @@ main.o: main.c ftpServer.h GLOBAL.h
 ftpServer.o: ftpServer.h GLOBAL.h
 	gcc -c ftpServer.c
 clean:
-	-rm serv main.o ftpServer.o
+	-rm main.o ftpServer.o

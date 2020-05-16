@@ -54,6 +54,8 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 		}
 		else if(events[iter].events & EPOLLIN)
 		{
+			printf("connected succuss!\n");
+			send(socketfd, "connected succuss!", 18, 0);
 			readCommand(epfd, socketfd, buffer);
 			deleteBlack(buffer);	
 			//cut command
