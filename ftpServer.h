@@ -27,7 +27,7 @@ struct cmdqueue{
 
 //function for kenal
 int socketBind(char *ipaddr, int port);
-void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct epoll_event *events, struct epoll_event sipev);
+void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct epoll_event *events);
 //
 
 //function for transport

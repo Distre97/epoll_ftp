@@ -7,26 +7,19 @@ int socketfd = NOTCONNETED;
 
 int main()
 {
-	printf("%d\t", socketfd);
 	int addlen;
 	struct sockaddr_in addr;
-	printf("%d\t", socketfd);
 	bzero(&addr, sizeof(addr));
 	addr.sin_family = AF_INET;
-	printf("%d\t", socketfd);
 	addr.sin_addr.s_addr = inet_addr(IPADDRESS);
 	addr.sin_port = htons(PORT);
-	printf("%d\t", socketfd);
 	addlen = sizeof(addr);
-	printf("%d\t", socketfd);
 
 	if((socketfd=socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		printf("error in get socketfd!\n");
 		exit(1);
 	}
-	printf("%d\t", socketfd);
-
 
 	if(connect(socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
@@ -34,21 +27,19 @@ int main()
 		exit(1);
 	}
 
-	printf("%d\t", socketfd);
-
 	while(1)
 	{
-		
-		bzero(&buffer, MAXSIZE);
-		printf("ftp> ");
-		fgets(buffer, MAXSIZE, stdin);
-		cmdCut(buffer);
-		printf("%s\m",&buffer);
 		if(socketfd < 0)
 		{	
 			printf("no client connected, bye!\n");
 			break;
 		}
+
+		bzero(&buffer, MAXSIZE);
+		printf("ftp> ");
+		fgets(buffer, MAXSIZE, stdin);
+		cmdCut(buffer);
+		
 		if(strncmp(buffer, "ls", 2) == 0)
 			listFiles(addr, buffer);
 		else if(strncmp(buffer, "get", 3) == 0)

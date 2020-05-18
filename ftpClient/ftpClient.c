@@ -6,15 +6,17 @@
 
 void listFiles(struct sockaddr_in addr, char* buffer)
 {
-	if(send(socketfd, buffer, MAXSIZE, 0) < 0)
+	char buf[MAXSIZE];
+	printf("buffer is %s",buffer);
+	if(write(socketfd, buffer, sizeof(buffer)) < 0)
 	{
-		printf("send command error!\n");
+		printf("write command error!\n");
 		return;
 	}
 
-	while(recv(socketfd, buffer, MAXSIZE, 0) > 0)
+	while(read(socketfd, buf, MAXSIZE) > 0)
 	{
-		printf("%s", buffer);
+		printf("%s", buf);
 	}
 
 	printf("\n");
@@ -24,7 +26,8 @@ void listFiles(struct sockaddr_in addr, char* buffer)
 
 void breakLink()
 {
-	printf("Client %d is out of connected!\n",socketfd);
+	if(socketfd >= 0)
+		printf("Client %d is out of connected!\n",socketfd);
 	close(socketfd);
 	socketfd = NOTCONNETED;
 }
@@ -34,13 +37,13 @@ void getFile(struct sockaddr_in addr, char* command)
 	char buf[MAXSIZE];
 	int length,file;
 
-	if(send(socketfd, command, MAXSIZE, 0) < 0)
+	if(write(socketfd, command, MAXSIZE) < 0)
 	{
-		printf("get command send error!\n");
+		printf("get command write error!\n");
 		return;
 	}
 
-	if(recv(socketfd, buf, MAXSIZE, 0) < 0)
+	if(read(socketfd, buf, MAXSIZE) < 0)
 	{
 		printf("file download error!\n");
 		return;
@@ -52,7 +55,7 @@ void getFile(struct sockaddr_in addr, char* command)
 		return;
 	}
 
-	while((length = recv(socketfd, buf, MAXSIZE, 0)) > 0)
+	while((length = read(socketfd, buf, MAXSIZE)) > 0)
 	{
 		if(write(file, buf, length) < 0)
 			printf("write file error!\n");
@@ -67,9 +70,9 @@ void putFile(struct sockaddr_in addr, char* command)
 	char buf[MAXSIZE];
 	int length,file;
 
-	if(send(socketfd, command, MAXSIZE, 0) < 0)
+	if(write(socketfd, command, MAXSIZE) < 0)
 	{
-		printf("put command send error!\n");
+		printf("put command write error!\n");
 		return;
 	}
 
@@ -81,7 +84,7 @@ void putFile(struct sockaddr_in addr, char* command)
 
 	while((length = read(file, buf, MAXSIZE)) > 0)
 	{
-		if(send(socketfd, buf, length, 0) < 0)
+		if(write(socketfd, buf, length) < 0)
 			printf("write file error!\n");
 	}
 	close(file);

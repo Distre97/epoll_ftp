@@ -29,7 +29,7 @@ int main()
 			printf("Epoll error:");
 			continue;
 		}
-		etModDealEvents(socketfd, epfd, eventnum, buffer, events, sipev);
+		etModDealEvents(socketfd, epfd, eventnum, buffer, events);
 
 	}
 	
