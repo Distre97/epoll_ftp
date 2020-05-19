@@ -2,12 +2,18 @@
 #include "GLOBAL.h"
 int socketBind(char *ipaddr, int port)
 {
-	int socketfd,status;
+	int listenfd,status,newsta;
 	struct sockaddr_in serv,clit;
-	socketfd = socket(AF_INET, SOCK_STREAM, 0);
-	assert(socketfd != -1);
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+	assert(listenfd != -1);
 	
 	memset(&serv, 0, sizeof(serv));
+	
+	//set nonblock
+	newsta = fcntl(listenfd, F_GETFL);
+	newsta = newsta | O_NONBLOCK;
+	fcntl(listenfd, F_SETFL, newsta);
+	//
 
 	//set serv's parameters
 	serv.sin_family = AF_INET;
@@ -15,10 +21,10 @@ int socketBind(char *ipaddr, int port)
 	serv.sin_port = htons(port);
 	//
 	
-	status = bind(socketfd, (struct sockaddr *)&serv, sizeof(serv));
+	status = bind(listenfd, (struct sockaddr *)&serv, sizeof(serv));
 	assert(status != -1);
 
-	return socketfd;
+	return listenfd;
 
 }
 
@@ -44,54 +50,69 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 			}
 			else
 				printf("client connecting succuss!\n");
-
+		
 			//set nonblock
 			oldsta = fcntl(flag, F_GETFL);
 			newsta = oldsta | O_NONBLOCK;
 			fcntl(flag, F_SETFL, newsta);
-			//
 
 			//set et mod
-			events[iter].events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-			events[iter].data.fd = flag;
-			epoll_ctl(epfd, EPOLL_CTL_ADD, flag, &events[iter]);
+			sipev.events = EPOLLIN | EPOLLET;
+			sipev.data.fd = flag;
+			epoll_ctl(epfd, EPOLL_CTL_ADD, flag, &sipev);
 
 		}
 		else if(events[iter].events & EPOLLIN)
 		{
 			printf("connected succuss!\n");
-			readCommand(epfd, socketfd, buffer);
+			readCommand(epfd, sfd, buffer);
 			//deleteBlack(buffer);	
 			//cut command
-			printf("read command over!\n");
+			//printf("read command over!\n");
 			//
 			
 			if(strncmp(buffer, "ls", 2) == 0)
-				listFiles(socketfd);
+				listFiles(sfd);
 			else if(strncmp(buffer, "help", 4) == 0)
-				readHelpFile(socketfd);
+				readHelpFile(sfd);
 			else if(strncmp(buffer, "get", 3) == 0)
 			{	
-				isFinished = getFile(socketfd, buffer+3);
+				isFinished = getFile(sfd, buffer+3);
 				if(isFinished == 1)
-					write(socketfd, "succussful downloading!", MAXSIZE);
+					printf("succussful uploading!");
 			}
 			else if(strncmp(buffer, "put", 3) == 0)
 			{	
-				isFinished = putFile(socketfd, buffer+3);
+				isFinished = putFile(sfd, buffer+3);
 				if(isFinished == 1)
-					write(socketfd, "succussful uploading!", MAXSIZE);
+					printf("succussful downloading!");
 			}
 			else
 				printf("No such command! Try \"help\" ! \n");	
 		}
 		else if(events[iter].events & EPOLLRDHUP)
 		{
-			close(socketfd);
-			epoll_ctl(epfd, EPOLL_CTL_DEL, socketfd, NULL);
-			printf("%d client break link\n",socketfd);
+			close(sfd);
+			epoll_ctl(epfd, EPOLL_CTL_DEL, sfd, NULL);
+			printf("%d client break link\n",sfd);
 		}
-
+		else if(events[iter].events & EPOLLOUT)
+		{
+			int len;
+			while(1)
+			{
+				len = write(sfd, buffer, strlen(buffer));
+				if(len == -1 && errno != EAGAIN)
+				{
+					printf("write error\n");
+					break;
+				}
+			}
+			close(sfd);
+			sipev.data.fd = sfd;
+			sipev.events = EPOLLIN;
+			epoll_ctl(epfd, EPOLL_CTL_MOD, sfd, &sipev);
+		}
 
 	}
 }
@@ -99,24 +120,36 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 void readCommand(int epfd, int socketfd, char* buffer)
 {
 	printf("run into readCommand\n");
-	if(read(socketfd, buffer, MAXSIZE)  <= 0)
+	if(read(socketfd, buffer, MAXSIZE -1)  <= 0)
 	{
-		if((errno == EAGAIN) || (errno == EWOULDBLOCK))
-			printf("error in set parameters\n");
-		else
-			printf("read error!\n");
+		if(errno == EINPROGRESS)
+			printf("dealing...\n");
+		else if(errno == EINTR)
+			printf("interrupt error!\n");
+		else if(errno == ECONNRESET)
+			printf("link error\n");
+		else if(errno == 11)
+			printf("there is no data in buffer\n");
+		printf("%d",errno);
 		close(socketfd);
 		epoll_ctl(epfd, EPOLL_CTL_DEL, socketfd, NULL);
+		return;
 	}
-	printf("command is %s\n.", buffer);
+	else
+	{
+		printf("command is %s\n.", buffer);
+		sipev.data.fd = socketfd;
+		sipev.events = EPOLLOUT;
+		epoll_ctl(epfd, EPOLL_CTL_MOD, socketfd, &sipev);
+	}
 }
 
 void listFiles(int socketfd)
 {
+	int len;
 	DIR* mydir = NULL;
 	struct dirent* myitem = NULL;
 	char filenames[MAXSIZE];
-	bzero(filenames, MAXSIZE);
 	mydir = opendir(".");
 	if(mydir == NULL)
 	{
@@ -126,11 +159,14 @@ void listFiles(int socketfd)
 	{
 		while((myitem = readdir(mydir)) != NULL)
 		{
+			bzero(filenames, MAXSIZE);
 			if(sprintf(filenames, myitem->d_name, MAXSIZE) < 0)
 			{
 				write(socketfd, "write buffer error!", MAXSIZE);
 				break;
 			}
+			len = strlen(filenames);
+			filenames[len] = '\t';
 			if(write(socketfd, filenames, MAXSIZE) < 0)
 			{
 				printf("send error!\n");

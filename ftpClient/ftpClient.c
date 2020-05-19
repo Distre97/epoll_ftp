@@ -8,18 +8,18 @@ void listFiles(struct sockaddr_in addr, char* buffer)
 {
 	char buf[MAXSIZE];
 	printf("buffer is %s",buffer);
-	if(write(socketfd, buffer, sizeof(buffer)) < 0)
+	if(write(socketfd, buffer, strlen(buffer)) < 0)
 	{
 		printf("write command error!\n");
 		return;
 	}
-
+	printf("begin read file list\n");
 	while(read(socketfd, buf, MAXSIZE) > 0)
 	{
 		printf("%s", buf);
 	}
-
-	printf("\n");
+	
+	printf("...\n");
 	close(socketfd);
 	return;
 }
@@ -37,7 +37,7 @@ void getFile(struct sockaddr_in addr, char* command)
 	char buf[MAXSIZE];
 	int length,file;
 
-	if(write(socketfd, command, MAXSIZE) < 0)
+	if(write(socketfd, command, strlen(command)) < 0)
 	{
 		printf("get command write error!\n");
 		return;
@@ -70,7 +70,7 @@ void putFile(struct sockaddr_in addr, char* command)
 	char buf[MAXSIZE];
 	int length,file;
 
-	if(write(socketfd, command, MAXSIZE) < 0)
+	if(write(socketfd, command, strlen(command)) < 0)
 	{
 		printf("put command write error!\n");
 		return;

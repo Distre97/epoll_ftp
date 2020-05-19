@@ -4,6 +4,7 @@
 #include "ftpServer.h"
 #include "GLOBAL.h"
 
+struct epoll_event sipev;
 int main()
 {
 	int socketfd,epfd,eventnum;
@@ -11,7 +12,6 @@ int main()
 	memset(buffer,0,MAXSIZE);
 	socketfd = socketBind(IPADDRESS, PORT);
 	listen(socketfd, LISQUEUE);
-	struct epoll_event sipev;
 	struct epoll_event events[EPOLLEVENTSIZE];
 	epfd = epoll_create(FDMAXSIZE);
 	

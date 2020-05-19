@@ -24,7 +24,7 @@ struct cmdqueue{
 	char* cmd[MAXSIZE];
 	struct cmdqueue* next;
 }cmdQ;
-
+extern struct epoll_event sipev;
 //function for kenal
 int socketBind(char *ipaddr, int port);
 void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct epoll_event *events);
