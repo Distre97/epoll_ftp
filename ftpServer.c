@@ -70,20 +70,28 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 			//cut command
 			//printf("read command over!\n");
 			//
-			
+			int namelen;
 			if(strncmp(buffer, "ls", 2) == 0)
 				listFiles(sfd);
 			else if(strncmp(buffer, "help", 4) == 0)
 				readHelpFile(sfd);
 			else if(strncmp(buffer, "get", 3) == 0)
 			{	
-				isFinished = getFile(sfd, buffer+3);
+				namelen = strlen(buffer)-3;
+				char* filen[namelen];
+				strcpy(filen,buffer+3);
+				printf("filename is %s\n", filen);
+				isFinished = getFile(sfd, filen);
 				if(isFinished == 1)
 					printf("succussful uploading!");
 			}
 			else if(strncmp(buffer, "put", 3) == 0)
-			{	
-				isFinished = putFile(sfd, buffer+3);
+			{
+				namelen = strlen(buffer)-3;
+				char* filen[namelen];
+				strcpy(filen,buffer+3);
+				printf("filename is %s\n", filen);
+				isFinished = putFile(sfd, filen);
 				if(isFinished == 1)
 					printf("succussful downloading!");
 			}
@@ -119,7 +127,6 @@ void etModDealEvents(int socketfd, int epfd, int eventNum, char* buffer, struct 
 
 void readCommand(int epfd, int socketfd, char* buffer)
 {
-	printf("run into readCommand\n");
 	if(read(socketfd, buffer, MAXSIZE -1)  <= 0)
 	{
 		if(errno == EINPROGRESS)
@@ -137,7 +144,7 @@ void readCommand(int epfd, int socketfd, char* buffer)
 	}
 	else
 	{
-		printf("command is %s\n.", buffer);
+		printf("command is %s\n", buffer);
 		sipev.data.fd = socketfd;
 		sipev.events = EPOLLOUT;
 		epoll_ctl(epfd, EPOLL_CTL_MOD, socketfd, &sipev);
@@ -186,23 +193,28 @@ void readHelpFile(int socketfd)
 int getFile(int socketfd, char* filename)
 {
 	int file, bufsz;
-	char buffer[MAXSIZE];
-	bzero(buffer,MAXSIZE);
-	file = open(filename, O_RDONLY);
+	char buf[MAXSIZE];
+	const char fname[MAXSIZE];
+	strcpy(fname,filename);
+	bzero(buf,MAXSIZE);
+	printf("the opening file is %s\n", fname);
+	file = open(fname, O_RDONLY);
 	if(file < 0)
 	{
-		write(socketfd,"get file error!", MAXSIZE);
+		printf("get file error!\n");
 		return 0;
 	}
-	
-	while((bufsz=read(file, buffer, MAXSIZE)) > 0)
+	printf("open file %s success\n", filename);
+	while((bufsz=read(file, buf, MAXSIZE)) > 0)
 	{
-		if(write(socketfd, buffer, bufsz) < 0)
+		printf("begin writing...\n");
+		if(write(socketfd, buf, bufsz) < 0)
 		{
 			printf("send file %s error\n", filename);
 			close(file);
 			return 0;
 		}
+		printf("writing...\n");
 	}
 	close(file);
 	close(socketfd);
@@ -213,19 +225,22 @@ int getFile(int socketfd, char* filename)
 int putFile(int socketfd, char* filename)
 {
 	int file, bufsz;
-	char buffer[MAXSIZE];
-	bzero(buffer, MAXSIZE);
+	char buf[MAXSIZE];
+	const char fname[MAXSIZE];
+	strcpy(fname, filename);
+	bzero(buf, MAXSIZE);
 
-	file = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+	file = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0644);
 	if(file < 0)
 	{
-		write(socketfd, "put file error!", MAXSIZE);
+		printf("put file error\n");
 		return 0;
 	}
-
-	while((bufsz=read(socketfd, buffer, MAXSIZE)) > 0)
+	else
+		write(socketfd, "yes", 3);
+	while((bufsz=read(socketfd, buf, MAXSIZE)) > 0)
 	{
-		if(write(file, buffer, bufsz) < 0)
+		if(write(file, buf, bufsz) < 0)
 		{
 			printf("recive file %s error\n", filename);
 			close(file);
